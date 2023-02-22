@@ -39,7 +39,8 @@ public class RequestServiceImpl implements RequestService {
     public RequestDto create(long userId, long eventId) {
         Event event = getEventOrThrow(eventId);
         List<Request> requests = requestRepository.findAllByRequesterIdAndEventId(userId, eventId);
-        if (event.getParticipantLimit() == 0) {
+        int participantCount = requestRepository.countRequestByStatusAndEventId(CONFIRMED,eventId);
+        if (event.getParticipantLimit() > 0 && event.getParticipantLimit() <= participantCount) {
             throw new RequestEventException("There are no seats but you are holding on");
         }
         if (event.getInitiator().getId() == userId) {
@@ -54,7 +55,6 @@ public class RequestServiceImpl implements RequestService {
         Request request = new Request();
         if (!event.isRequestModeration()) {
             request.setStatus(CONFIRMED);
-            event.setParticipantLimit(event.getParticipantLimit() - 1);
         } else {
             request.setStatus(PENDING);
         }
@@ -85,9 +85,8 @@ public class RequestServiceImpl implements RequestService {
 
     @Override
     @Transactional
-    public RequestDto updateStateCancel(Long userId, Long requestId) {
-        getUserOrThrow(userId);
-        Request request = getRequestOrThrow(requestId);
+    public RequestDto updateStateCancel(Long requester, Long requestId) {
+        Request request = getRequestOrThrow(requester,requestId);
         request.setStatus(CANCELED);
         return requestMapper.requestToRequestDto(request);
     }
@@ -119,26 +118,25 @@ public class RequestServiceImpl implements RequestService {
                 new NotFoundException(String.format("User id = %s not found", id)));
     }
 
-    private Request getRequestOrThrow(Long id) {
-        return requestRepository.findById(id).orElseThrow(() ->
-                new NotFoundException(String.format("Request id = %s not found", id)));
+    private Request getRequestOrThrow(Long requester,Long requestId) {
+        return requestRepository.findRequestByRequesterIdAndId(requester,requestId).orElseThrow(() ->
+                new NotFoundException(String.format("Request id = %s not found", requestId)));
     }
 
     private void validatedRequest(Event event, List<Request> requests, RequestStatus status) {
         for (Request request : requests) {
+            int participantCount = requestRepository.countRequestByStatusAndEventId(CONFIRMED,event.getId());
             if (!request.getStatus().equals(PENDING)) {
                 throw new RequestEventException("State should be PENDING");
             }
-            if (event.getParticipantLimit() == 0) {
-                request.setStatus(REJECTED);
-                throw new RequestEventException("There are no places in this table, but you are holding on");
+            if (event.getParticipantLimit() > 0 && event.getParticipantLimit() <= participantCount) {
+                throw new RequestEventException("There are no seats but you are holding on");
             }
             if (status.equals(REJECTED)) {
                 request.setStatus(REJECTED);
             }
             if (status.equals(CONFIRMED)) {
                 request.setStatus(CONFIRMED);
-                event.setParticipantLimit(event.getParticipantLimit() - 1);
             }
         }
     }

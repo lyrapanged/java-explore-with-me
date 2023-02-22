@@ -14,7 +14,6 @@ import ru.practicum.explore.event.mapper.EventMapper;
 import ru.practicum.explore.event.model.Event;
 import ru.practicum.explore.event.model.QEvent;
 import ru.practicum.explore.event.repository.EventRepository;
-import ru.practicum.explore.exception.BadValidationException;
 import ru.practicum.explore.exception.NotFoundException;
 import ru.practicum.explore.exception.WrongDateException;
 import ru.practicum.explore.statistics.StatisticsService;
@@ -64,9 +63,6 @@ public class EventServiceImpl implements EventService {
     public EventDto create(Long userId, EventDtoNew eventDtoNew) {
         if (eventDtoNew.getEventDate().isBefore(now())) {
             throw new WrongDateException("date should be in the future");
-        }
-        if (eventDtoNew.getAnnotation() == null || eventDtoNew.getAnnotation().isBlank()) {
-            throw new BadValidationException("Wrong annotation");
         }
         User user = getUserOrThrow(userId);
         Category category = getCategoryOrThrow(eventDtoNew.getCategory());
@@ -253,13 +249,13 @@ public class EventServiceImpl implements EventService {
     }
 
     private Event updateAdminEvent(Event event, EventDtoAdminUpdate eventDtoAdminUpdate) {
-        if (eventDtoAdminUpdate.getTitle() != null) {
+        if (eventDtoAdminUpdate.getTitle() != null && !(eventDtoAdminUpdate.getTitle().isBlank())) {
             event.setTitle(eventDtoAdminUpdate.getTitle());
         }
-        if (eventDtoAdminUpdate.getAnnotation() != null) {
+        if (eventDtoAdminUpdate.getAnnotation() != null && !(eventDtoAdminUpdate.getAnnotation().isBlank())) {
             event.setAnnotation(eventDtoAdminUpdate.getAnnotation());
         }
-        if (eventDtoAdminUpdate.getDescription() != null) {
+        if (eventDtoAdminUpdate.getDescription() != null && !(eventDtoAdminUpdate.getDescription().isBlank())) {
             event.setDescription(eventDtoAdminUpdate.getDescription());
         }
         if (eventDtoAdminUpdate.getEventDate() != null) {
@@ -281,13 +277,13 @@ public class EventServiceImpl implements EventService {
     }
 
     private Event updateEvent(Event event, EventDtoUpdate eventDtoUpdate) {
-        if (eventDtoUpdate.getTitle() != null) {
+        if (eventDtoUpdate.getTitle() != null && !(eventDtoUpdate.getTitle().isBlank())) {
             event.setTitle(eventDtoUpdate.getTitle());
         }
-        if (eventDtoUpdate.getAnnotation() != null) {
+        if (eventDtoUpdate.getAnnotation() != null && !(eventDtoUpdate.getAnnotation().isBlank())) {
             event.setAnnotation(eventDtoUpdate.getAnnotation());
         }
-        if (eventDtoUpdate.getDescription() != null) {
+        if (eventDtoUpdate.getDescription() != null && !(eventDtoUpdate.getDescription().isBlank())) {
             event.setDescription(eventDtoUpdate.getDescription());
         }
         if (eventDtoUpdate.getEventDate() != null) {

@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 @Setter
 public class EventDtoNew {
 
+    @NotBlank
     @Size(min = 20, max = 2000)
     private String annotation;
     @NotNull

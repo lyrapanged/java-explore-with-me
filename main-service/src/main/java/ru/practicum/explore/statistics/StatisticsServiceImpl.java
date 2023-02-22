@@ -57,15 +57,15 @@ public class StatisticsServiceImpl implements StatisticsService {
                     .collect(Collectors.groupingBy(ViewStatsDto::getUri));
             if (!stat.isEmpty()) {
                 eventDtoFulls.forEach(eventDtoFull -> eventDtoFull
-                        .setViews(appKeyViewStatusDto.get("/events/" + eventDtoFull).get(0).getHits()));
+                        .setViews(appKeyViewStatusDto.get("/events/" + eventDtoFull.getId()).get(0).getHits()));
             }
             List<Request> confirmedRequests = requestRepository.findAllByStatusAndEventIdIn(CONFIRMED, eventIds);
-            Map<Long, List<Request>> requestsWithId = confirmedRequests
+            Map<Long, Long> requestsWithId = confirmedRequests
                     .stream()
-                    .collect(Collectors.groupingBy(Request::getId));
+                    .collect(Collectors.groupingBy((Request::getId), Collectors.counting()));
             if (requestsWithId.size() != 0) {
                 eventDtoFulls.forEach(eventDtoFull -> eventDtoFull
-                        .setConfirmedRequest(requestsWithId.get(eventDtoFull.getId()).size()));
+                        .setConfirmedRequest(requestsWithId.get(eventDtoFull.getId()).intValue()));
             }
             return eventDtoFulls;
         }
