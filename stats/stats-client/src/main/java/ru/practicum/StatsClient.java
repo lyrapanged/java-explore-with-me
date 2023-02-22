@@ -29,7 +29,7 @@ public class StatsClient {
     }
 
     public void create(HttpServletRequest request) {
-        EndpointHitDto endpointHitDto = new EndpointHitDto(null, "main-service", request.getRequestURI(),
+        EndpointHitDto endpointHitDto = new EndpointHitDto(null, appName, request.getRequestURI(),
                 request.getRemoteAddr(), LocalDateTime.now());
         template.postForEntity("/hit", new HttpEntity<>(endpointHitDto), EndpointHitDto.class);
     }

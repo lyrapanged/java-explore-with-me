@@ -34,18 +34,11 @@ public class Event {
     @ManyToOne
     @JoinColumn(name = "initiator_id")
     private User initiator;
-    @Embedded
-    @AttributeOverrides({
-            @AttributeOverride(name = "lat", column = @Column(name = "lat")),
-            @AttributeOverride(name = "lon", column = @Column(name = "lon"))
-    })
     private Location location;
     @Column(name = "paid", nullable = false)
     private boolean paid;
     @Column(name = "participant_limit")
     private int participantLimit;
-    @Column(name = "confirmed_request")
-    private int confirmedRequest;
     @Column(name = "published_on", nullable = false)
     private LocalDateTime publishedOn;
     @Column(name = "request_moderation", nullable = false)
@@ -55,8 +48,6 @@ public class Event {
     private State state;
     @Column(name = "title", nullable = false)
     private String title;
-    @Column(name = "views", nullable = false)
-    private Long views;
 
     public enum State {
         PENDING,

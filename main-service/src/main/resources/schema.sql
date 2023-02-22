@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS categories
 CREATE TABLE IF NOT EXISTS events
 (
     id                 SERIAL PRIMARY KEY,
-    title              VARCHAR(5000)               NOT NULL,
+    title              VARCHAR(120)                NOT NULL,
     annotation         VARCHAR(2000)               NOT NULL,
     description        VARCHAR(7000)               NOT NULL,
     category_id        BIGINT                      NOT NULL REFERENCES categories (id),
@@ -33,8 +33,6 @@ CREATE TABLE IF NOT EXISTS events
     created_on         TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     published_on       TIMESTAMP WITHOUT TIME ZONE,
     request_moderation BOOLEAN DEFAULT TRUE,
-    views              BIGINT  DEFAULT 0,
-    confirmed_request  BIGINT  DEFAULT 0,
     state              VARCHAR(100)                NOT NULL
 );
 CREATE TABLE IF NOT EXISTS requests
@@ -56,5 +54,6 @@ CREATE TABLE IF NOT EXISTS compilations
 CREATE TABLE IF NOT EXISTS compilation_event
 (
     compilation_id BIGINT NOT NULL REFERENCES compilations (id) ON DELETE CASCADE,
-    event_id       BIGINT NOT NULL REFERENCES events (id) ON DELETE CASCADE
+    event_id       BIGINT NOT NULL REFERENCES events (id) ON DELETE CASCADE,
+    PRIMARY KEY (compilation_id, event_id)
 );

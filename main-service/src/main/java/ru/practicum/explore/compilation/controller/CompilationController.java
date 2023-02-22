@@ -9,7 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.explore.compilation.dto.CompilationDto;
-import ru.practicum.explore.compilation.service.CompilationServiceImpl;
+import ru.practicum.explore.compilation.service.CompilationService;
 
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
@@ -22,7 +22,7 @@ import java.util.List;
 @RequestMapping(path = "/compilations")
 public class CompilationController {
 
-    private final CompilationServiceImpl compilationService;
+    private final CompilationService compilationService;
 
     @GetMapping("{compId}")
     public CompilationDto get(@PositiveOrZero @PathVariable Long compId) {

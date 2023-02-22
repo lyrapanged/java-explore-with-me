@@ -4,13 +4,9 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.StatsClient;
-import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.explore.category.model.Category;
 import ru.practicum.explore.category.repository.CategoryRepository;
 import ru.practicum.explore.event.dto.*;
@@ -21,14 +17,13 @@ import ru.practicum.explore.event.repository.EventRepository;
 import ru.practicum.explore.exception.BadValidationException;
 import ru.practicum.explore.exception.NotFoundException;
 import ru.practicum.explore.exception.WrongDateException;
-import ru.practicum.explore.request.model.Request;
-import ru.practicum.explore.request.repository.RequestRepository;
+import ru.practicum.explore.statistics.StatisticsService;
 import ru.practicum.explore.user.model.User;
 import ru.practicum.explore.user.repository.UserRepository;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,7 +35,6 @@ import static ru.practicum.explore.event.dto.EventDtoUpdate.State.CANCEL_REVIEW;
 import static ru.practicum.explore.event.dto.EventDtoUpdate.State.SEND_TO_REVIEW;
 import static ru.practicum.explore.event.model.Event.State;
 import static ru.practicum.explore.event.model.Event.State.*;
-import static ru.practicum.explore.request.model.Request.RequestStatus.CONFIRMED;
 
 @Service
 @Slf4j
@@ -51,25 +45,18 @@ public class EventServiceImpl implements EventService {
     private final EventMapper eventMapper;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final RequestRepository requestRepository;
-
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    private final StatsClient statsClient;
+    private final StatisticsService statisticsService;
 
     @Autowired
     public EventServiceImpl(EventRepository eventRepository,
                             EventMapper eventMapper, UserRepository userRepository,
                             CategoryRepository categoryRepository,
-                            RequestRepository requestRepository,
-                            @Value("${stats-server.url}") String url,
-                            @Value("${application.name}") String appName) {
+                            StatisticsService statisticsService) {
         this.eventRepository = eventRepository;
         this.eventMapper = eventMapper;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
-        this.requestRepository = requestRepository;
-        statsClient = new StatsClient(url, appName, new RestTemplateBuilder());
+        this.statisticsService = statisticsService;
     }
 
     @Override
@@ -85,8 +72,8 @@ public class EventServiceImpl implements EventService {
         Category category = getCategoryOrThrow(eventDtoNew.getCategory());
         Event newEventEntity = new Event(null, eventDtoNew.getAnnotation(), category, now(),
                 eventDtoNew.getDescription(), eventDtoNew.getEventDate(), user, eventDtoNew.getLocation(),
-                eventDtoNew.getPaid(), eventDtoNew.getParticipantLimit(), 0, null,
-                eventDtoNew.getRequestModeration(), PENDING, eventDtoNew.getTitle(), 0L);
+                eventDtoNew.getPaid(), eventDtoNew.getParticipantLimit(), null,
+                eventDtoNew.getRequestModeration(), PENDING, eventDtoNew.getTitle());
         return eventMapper.eventToEventDto(eventRepository.save(newEventEntity));
     }
 
@@ -115,7 +102,8 @@ public class EventServiceImpl implements EventService {
         if (event.getState().equals(PUBLISHED)) {
             throw new WrongDateException("Wrong state");
         }
-        Event eventForUpdate = eventMapper.updateEventWithUser(eventDtoUpdate, event);
+        Event eventForUpdate = updateEvent(event, eventDtoUpdate);
+
         if (eventDtoUpdate.getCategory() != null) {
             Category category = getCategoryOrThrow(eventDtoUpdate.getCategory());
             eventForUpdate.setCategory(category);
@@ -139,7 +127,7 @@ public class EventServiceImpl implements EventService {
         if (eventDtoAdminUpdate.getEventDate() != null && eventDtoAdminUpdate.getEventDate().isBefore(now())) {
             throw new WrongDateException("Data should be in the future");
         }
-        Event eventForUpdate = eventMapper.updateEventWithUser(eventDtoAdminUpdate, event);
+        Event eventForUpdate = updateAdminEvent(event, eventDtoAdminUpdate);
         if (eventDtoAdminUpdate.getCategory() != null) {
             Category category = getCategoryOrThrow(eventDtoAdminUpdate.getCategory());
             eventForUpdate.setCategory(category);
@@ -157,24 +145,31 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventDtoFull get(Long id, HttpServletRequest request) {
         Event event = eventRepository.findByIdAndState(id, PUBLISHED);
-        statsClient.create(request);
+        statisticsService.create(request);
         EventDtoFull eventFullDto = eventMapper.eventToEventFullDto(event);
-        event.setViews(event.getViews() + 1);
+        List<EventDtoFull> eventDtoFulls = new ArrayList<>();
+        eventDtoFulls.add(eventFullDto);
         eventRepository.save(event);
-        return addStats(eventFullDto);
+        List<EventDtoFull> eventDtoFullsReturned = statisticsService.addStats(eventDtoFulls);
+        if (eventDtoFullsReturned.size() != 0) {
+            return eventDtoFullsReturned.get(0);
+        } else {
+            return eventFullDto;
+        }
+
     }
 
     @Override
     public List<EventDtoFull> getAllByFilter(String text, List<Long> categories, Boolean paid, LocalDateTime rangeStart,
                                              LocalDateTime rangeEnd, Pageable pageable, HttpServletRequest request) {
-        statsClient.create(request);
+        statisticsService.create(request);
         Predicate predicate = predicateByUser(text, categories, paid, rangeStart,
                 rangeEnd).getValue();
         List<EventDtoFull> eventDtoFulls = eventRepository.findAll(requireNonNull(predicate), pageable).getContent()
                 .stream()
                 .map(eventMapper::eventToEventFullDto)
                 .collect(Collectors.toList());
-        return eventDtoFulls.stream().map(this::addStats).collect(Collectors.toList());
+        return statisticsService.addStats(eventDtoFulls);
     }
 
     @Override
@@ -185,7 +180,7 @@ public class EventServiceImpl implements EventService {
                 .stream()
                 .map(eventMapper::eventToEventFullDto)
                 .collect(Collectors.toList());
-        return eventDtoFulls.stream().map(this::addStats).collect(Collectors.toList());
+        return statisticsService.addStats(eventDtoFulls);
     }
 
     private User getUserOrThrow(Long id) {
@@ -257,19 +252,59 @@ public class EventServiceImpl implements EventService {
         return booleanBuilder;
     }
 
-    private EventDtoFull addStats(EventDtoFull eventDtoFull) {
-        List<ViewStatsDto> stat =
-                statsClient.get(eventDtoFull.getCreatedOn().format(FORMATTER),
-                        now().format(FORMATTER),
-                        List.of("/events/" + eventDtoFull.getId()), false).getBody();
-        if (stat == null) {
-            stat = List.of();
+    private Event updateAdminEvent(Event event, EventDtoAdminUpdate eventDtoAdminUpdate) {
+        if (eventDtoAdminUpdate.getTitle() != null) {
+            event.setTitle(eventDtoAdminUpdate.getTitle());
         }
-        if (!stat.isEmpty()) {
-            eventDtoFull.setViews(stat.get(0).getHits());
+        if (eventDtoAdminUpdate.getAnnotation() != null) {
+            event.setAnnotation(eventDtoAdminUpdate.getAnnotation());
         }
-        List<Request> requestList = requestRepository.findAllByStatusAndAndEventId(CONFIRMED, eventDtoFull.getId());
-        eventDtoFull.setConfirmedRequests(requestList.size());
-        return eventDtoFull;
+        if (eventDtoAdminUpdate.getDescription() != null) {
+            event.setDescription(eventDtoAdminUpdate.getDescription());
+        }
+        if (eventDtoAdminUpdate.getEventDate() != null) {
+            event.setEventDate(eventDtoAdminUpdate.getEventDate());
+        }
+        if (eventDtoAdminUpdate.getLocation() != null) {
+            event.setLocation(event.getLocation());
+        }
+        if (eventDtoAdminUpdate.getPaid() != null) {
+            event.setPaid(eventDtoAdminUpdate.getPaid());
+        }
+        if (eventDtoAdminUpdate.getParticipantLimit() != null) {
+            event.setParticipantLimit(eventDtoAdminUpdate.getParticipantLimit());
+        }
+        if (eventDtoAdminUpdate.getRequestModeration() != null) {
+            event.setRequestModeration(eventDtoAdminUpdate.getRequestModeration());
+        }
+        return event;
+    }
+
+    private Event updateEvent(Event event, EventDtoUpdate eventDtoUpdate) {
+        if (eventDtoUpdate.getTitle() != null) {
+            event.setTitle(eventDtoUpdate.getTitle());
+        }
+        if (eventDtoUpdate.getAnnotation() != null) {
+            event.setAnnotation(eventDtoUpdate.getAnnotation());
+        }
+        if (eventDtoUpdate.getDescription() != null) {
+            event.setDescription(eventDtoUpdate.getDescription());
+        }
+        if (eventDtoUpdate.getEventDate() != null) {
+            event.setEventDate(eventDtoUpdate.getEventDate());
+        }
+        if (eventDtoUpdate.getLocation() != null) {
+            event.setLocation(event.getLocation());
+        }
+        if (eventDtoUpdate.getPaid() != null) {
+            event.setPaid(eventDtoUpdate.getPaid());
+        }
+        if (eventDtoUpdate.getParticipantLimit() != null) {
+            event.setParticipantLimit(eventDtoUpdate.getParticipantLimit());
+        }
+        if (eventDtoUpdate.getRequestModeration() != null) {
+            event.setRequestModeration(eventDtoUpdate.getRequestModeration());
+        }
+        return event;
     }
 }

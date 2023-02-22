@@ -4,8 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import ru.practicum.explore.category.model.Category;
-import ru.practicum.explore.user.model.User;
+import ru.practicum.explore.category.dto.CategoryDto;
+import ru.practicum.explore.user.dto.UserDto;
 
 @Getter
 @Setter
@@ -15,9 +15,9 @@ public class EventDtoCompilation {
 
     private Long id;
     private String annotation;
-    private Category category;
+    private CategoryDto category;
     private Long confirmedRequests;
-    private User initiator;
+    private UserDto initiatorDto;
     private Boolean paid;
     private String title;
     private Integer views;

@@ -2,7 +2,6 @@ package ru.practicum.explore.event.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import ru.practicum.explore.category.mapper.CategoryMapper;
 import ru.practicum.explore.event.dto.*;
@@ -30,13 +29,4 @@ public interface EventMapper {
     EventDtoFull eventToEventFullDto(Event event);
 
     Location toEntity(Location location);
-
-    @Mapping(target = "state", ignore = true)
-    @Mapping(target = "category", ignore = true)
-    Event updateEventWithUser(EventDtoUpdate eventUpdateDto, @MappingTarget Event event);
-
-    @Mapping(target = "state", ignore = true)
-    @Mapping(target = "category", ignore = true)
-    Event updateEventWithUser(EventDtoAdminUpdate eventUpdateAdminDto, @MappingTarget Event event);
-
 }

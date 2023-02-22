@@ -6,11 +6,12 @@ import lombok.*;
 import javax.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
+
 @Builder
 @NoArgsConstructor
 @Getter
 @Setter
+@AllArgsConstructor
 public class EndpointHitDto {
 
     private Long id;
@@ -22,4 +23,5 @@ public class EndpointHitDto {
     private String ip;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime timestamp;
+
 }

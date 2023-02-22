@@ -2,7 +2,7 @@ package ru.practicum.explore.compilation.dto;
 
 import lombok.*;
 
-import java.util.List;
+import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -11,7 +11,7 @@ import java.util.List;
 @ToString
 public class CompilationDtoUpdate {
 
-    private List<Long> events;
+    private Set<Long> events;
     private String title;
     private Boolean pinned;
 }
