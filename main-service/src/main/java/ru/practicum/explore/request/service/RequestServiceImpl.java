@@ -39,7 +39,7 @@ public class RequestServiceImpl implements RequestService {
     public RequestDto create(long userId, long eventId) {
         Event event = getEventOrThrow(eventId);
         List<Request> requests = requestRepository.findAllByRequesterIdAndEventId(userId, eventId);
-        int participantCount = requestRepository.countRequestByStatusAndEventId(CONFIRMED,eventId);
+        int participantCount = requestRepository.countRequestByStatusAndEventId(CONFIRMED, eventId);
         if (event.getParticipantLimit() > 0 && event.getParticipantLimit() <= participantCount) {
             throw new RequestEventException("There are no seats but you are holding on");
         }
@@ -86,7 +86,7 @@ public class RequestServiceImpl implements RequestService {
     @Override
     @Transactional
     public RequestDto updateStateCancel(Long requester, Long requestId) {
-        Request request = getRequestOrThrow(requester,requestId);
+        Request request = getRequestOrThrow(requester, requestId);
         request.setStatus(CANCELED);
         return requestMapper.requestToRequestDto(request);
     }
@@ -118,14 +118,14 @@ public class RequestServiceImpl implements RequestService {
                 new NotFoundException(String.format("User id = %s not found", id)));
     }
 
-    private Request getRequestOrThrow(Long requester,Long requestId) {
-        return requestRepository.findRequestByRequesterIdAndId(requester,requestId).orElseThrow(() ->
+    private Request getRequestOrThrow(Long requester, Long requestId) {
+        return requestRepository.findRequestByRequesterIdAndId(requester, requestId).orElseThrow(() ->
                 new NotFoundException(String.format("Request id = %s not found", requestId)));
     }
 
     private void validatedRequest(Event event, List<Request> requests, RequestStatus status) {
         for (Request request : requests) {
-            int participantCount = requestRepository.countRequestByStatusAndEventId(CONFIRMED,event.getId());
+            int participantCount = requestRepository.countRequestByStatusAndEventId(CONFIRMED, event.getId());
             if (!request.getStatus().equals(PENDING)) {
                 throw new RequestEventException("State should be PENDING");
             }
