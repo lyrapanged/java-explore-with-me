@@ -1,9 +1,10 @@
 DROP TABLE IF EXISTS compilation_event;
 DROP TABLE IF EXISTS requests;
 DROP TABLE IF EXISTS events;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS compilations;
+DROP TABLE IF EXISTS comments;
 
 CREATE TABLE IF NOT EXISTS users
 (
@@ -56,4 +57,14 @@ CREATE TABLE IF NOT EXISTS compilation_event
     compilation_id BIGINT NOT NULL REFERENCES compilations (id) ON DELETE CASCADE,
     event_id       BIGINT NOT NULL REFERENCES events (id) ON DELETE CASCADE,
     PRIMARY KEY (compilation_id, event_id)
+);
+
+CREATE TABLE IF NOT EXISTS comments
+(
+    id        SERIAL PRIMARY KEY,
+    author_id BIGINT REFERENCES users (id) ON DELETE CASCADE,
+    event_id  BIGINT       NOT NULL,
+    text      VARCHAR(500) NOT NULL,
+    created   TIMESTAMP    NOT NULL,
+    status    VARCHAR(32)  NOT NULL
 );
